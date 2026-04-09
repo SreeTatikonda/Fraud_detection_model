@@ -60,9 +60,9 @@ class RiskMetaScorer:
     The interaction terms help when multiple signals agree (multiplicative risk).
     """
 
-    def __init__(self, gnn_weight: float = 0.3,
-                 anomaly_weight: float = 0.25,
-                 ensemble_weight: float = 0.45):
+    def __init__(self, gnn_weight: float = 0.2,
+                 anomaly_weight: float = 0.6,
+                 ensemble_weight: float = 0.2):
         # Fallback weights (used before calibration)
         self.gnn_weight      = gnn_weight
         self.anomaly_weight  = anomaly_weight
@@ -92,17 +92,14 @@ class RiskMetaScorer:
 
     def score(self, gnn: float, anomaly: float, ensemble: float) -> float:
         """Returns final fraud probability [0, 1]."""
-        if self.calibrated:
-            X = self._build_meta_features(
-                np.array([gnn]), np.array([anomaly]), np.array([ensemble])
-            )
-            X_scaled = self.scaler.transform(X)
-            return float(self.lr.predict_proba(X_scaled)[0, 1])
-        else:
-            # Weighted average fallback
-            return (self.gnn_weight * gnn +
-                    self.anomaly_weight * anomaly +
-                    self.ensemble_weight * ensemble)
+        base = (self.gnn_weight * gnn +
+                self.anomaly_weight * anomaly +
+                self.ensemble_weight * ensemble)
+        elevated = [s for s in [gnn, anomaly, ensemble] if s > 0.3]
+        boost = 0.15 * (sum(elevated) / len(elevated)) if len(elevated) >= 2 else 0.0
+        if anomaly >= 0.5:
+            boost += 0.35
+        return float(min(base + boost, 1.0))
 
     def save(self, path: str):
         with open(path, 'wb') as f:

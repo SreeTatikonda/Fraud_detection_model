@@ -159,9 +159,10 @@ class AnomalyIsolationForest:
         """
         X = self.scaler.transform(X_raw)
         raw = self.model.decision_function(X)   # negative = anomalous
-        # Normalise to [0, 1] — higher means more anomalous
-        norm = (-raw - raw.min()) / (raw.max() - raw.min() + 1e-8)
-        return norm.astype(np.float32)
+        # Clip to known range and normalise to [0, 1]
+        clipped = np.clip(-raw, 0, None)
+        norm = clipped / (clipped.max() + 1e-3)
+        return np.clip(norm, 0, 1).astype(np.float32)
 
     def save(self, path: str):
         with open(path, 'wb') as f:

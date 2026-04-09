@@ -172,8 +172,9 @@ def train():
         for i in range(n_train)
     ])
 
-    meta = RiskMetaScorer()
-    meta.fit(gnn_scores_train, anomaly_scores_train, ensemble_scores_train, y_train)
+    meta = RiskMetaScorer(gnn_weight=0.3, anomaly_weight=0.25, ensemble_weight=0.45)
+    # Skip LR calibration — only reliable on real labeled data, not synthetic
+    # meta.fit(gnn_scores_train, anomaly_scores_train, ensemble_scores_train, y_train)
 
     engine = RiskDecisionEngine(
         low_threshold=0.3,
